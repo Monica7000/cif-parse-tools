@@ -1,0 +1,19 @@
+7C4J per-protein total amino-acid summary (unique protein codes).
+Unique proteins: 11
+
+=========================================================================
+Code      Chains      TotalAA  UniProt     db_code           Protein name
+-------------------------------------------------------------------------
+ARP7      K               477  Q12406      ARP7_YEAST        Actin-like protein ARP7
+ARP9      L               467  Q05123      ARP9_YEAST        Chromatin structure-remodeling complex protein ARP9
+GAM3      I              1314  P09547      SWI1_YEAST        Regulatory protein GAM3
+SNF2      H              1703  P22082      SNF2_YEAST        ATP-dependent helicase SNF2
+SNF5      F               905  P18480      SNF5_YEAST        SWI/SNF complex subunit SNF5
+SNF6      C               332  P18888      SNF6_YEAST        SWI/SNF complex component SNF6
+SWP73     A               566  P53628      SNF12_YEAST       SWI/SNF complex component SWP73
+SWP82     E               623  P43554      SWP82_YEAST       SWI/SNF global transcription activator complex subunit SWP82
+TY1       J               157  P53330      RT102_YEAST       Regulator of Ty1 transposition protein 102
+TYE2      B,D             825  P32591      SWI3_YEAST        Transcription factor TYE2
+UNKG      G                82  7C4J                          Unkown
+-------------------------------------------------------------------------
+TOTAL                    7451

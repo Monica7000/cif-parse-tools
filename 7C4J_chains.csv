@@ -1,0 +1,13 @@
+chain,entity_id,uniprot,db_code,organism,name
+A,1,P53628,SNF12_YEAST,,SWI/SNF complex component SWP73
+B,2,P32591,SWI3_YEAST,,"Transcription factor TYE2,Transcription regulatory protein SWI3"
+C,3,P18888,SNF6_YEAST,,SWI/SNF complex component SNF6
+D,2,P32591,SWI3_YEAST,,"Transcription factor TYE2,Transcription regulatory protein SWI3"
+E,4,P43554,SWP82_YEAST,,SWI/SNF global transcription activator complex subunit SWP82
+F,5,P18480,SNF5_YEAST,,"SWI/SNF complex subunit SNF5,Transcription factor TYE4,Transcription regulatory protein SNF5"
+G,8,7C4J,,,Unkown
+H,6,P22082,SNF2_YEAST,,"ATP-dependent helicase SNF2,Regulatory protein GAM1,Regulatory protein SWI2,SWI/SNF complex component SNF2,Transcription factor TYE3"
+I,7,P09547,SWI1_YEAST,,"Regulatory protein GAM3,SWI/SNF complex subunit SWI1,Transcription regulatory protein ADR6,Transcription regulatory protein SWI1"
+J,9,P53330,RT102_YEAST,,Regulator of Ty1 transposition protein 102
+K,10,Q12406,ARP7_YEAST,,"Actin-like protein ARP7,Chromatin structure-remodeling complex protein ARP7,SWI/SNF complex component ARP7"
+L,11,Q05123,ARP9_YEAST,,"Chromatin structure-remodeling complex protein ARP9,SWI/SNF complex component ARP9"

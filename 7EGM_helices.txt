@@ -1,0 +1,109 @@
+Helices extracted from 7EGM.cif
+Total helices: 92   Chains with helices: ['A', 'B', 'C', 'D', 'E', 'H', 'I', 'J']
+
+===================================================================================================
+Chain  ID           Start    End  Length  UniProt   Protein
+---------------------------------------------------------------------------------------------------
+A      HELX_P1        489    494       6  P22082    ATP-dependent helicase SNF2
+A      HELX_P2        494    518      25  P22082    ATP-dependent helicase SNF2
+A      HELX_P3        527    538      12  P22082    ATP-dependent helicase SNF2
+A      HELX_P4        538    557      20  P22082    ATP-dependent helicase SNF2
+A      HELX_P5        575    588      14  P22082    ATP-dependent helicase SNF2
+B      HELX_P6        678    692      15  P09547    Regulatory protein GAM3
+B      HELX_P7        707    714       8  P09547    Regulatory protein GAM3
+B      HELX_P8        719    734      16  P09547    Regulatory protein GAM3
+B      HELX_P9        747    765      19  P09547    Regulatory protein GAM3
+B      HELX_P10       793    800       8  P09547    Regulatory protein GAM3
+B      HELX_P11       883    896      14  P09547    Regulatory protein GAM3
+B      HELX_P12       909    929      21  P09547    Regulatory protein GAM3
+B      HELX_P13       933    938       6  P09547    Regulatory protein GAM3
+B      HELX_P14       942    957      16  P09547    Regulatory protein GAM3
+B      HELX_P15       965    983      19  P09547    Regulatory protein GAM3
+B      HELX_P16       990   1003      14  P09547    Regulatory protein GAM3
+B      HELX_P17      1033   1037       5  P09547    Regulatory protein GAM3
+B      HELX_P18      1038   1046       9  P09547    Regulatory protein GAM3
+B      HELX_P19      1051   1063      13  P09547    Regulatory protein GAM3
+B      HELX_P20      1080   1091      12  P09547    Regulatory protein GAM3
+B      HELX_P21      1103   1115      13  P09547    Regulatory protein GAM3
+B      HELX_P22      1118   1125       8  P09547    Regulatory protein GAM3
+B      HELX_P23      1130   1154      25  P09547    Regulatory protein GAM3
+B      HELX_P24      1188   1195       8  P09547    Regulatory protein GAM3
+B      HELX_P25      1199   1213      15  P09547    Regulatory protein GAM3
+B      HELX_P26      1233   1260      28  P09547    Regulatory protein GAM3
+B      HELX_P27      1265   1271       7  P09547    Regulatory protein GAM3
+B      HELX_P28      1278   1286       9  P09547    Regulatory protein GAM3
+B      HELX_P29      1292   1314      23  P09547    Regulatory protein GAM3
+C      HELX_P30       369    400      32  P18480    SWI/SNF complex subunit SNF5
+C      HELX_P31       443    450       8  P18480    SWI/SNF complex subunit SNF5
+C      HELX_P32       487    499      13  P18480    SWI/SNF complex subunit SNF5
+C      HELX_P33       509    523      15  P18480    SWI/SNF complex subunit SNF5
+C      HELX_P34       571    584      14  P18480    SWI/SNF complex subunit SNF5
+C      HELX_P35       589    610      22  P18480    SWI/SNF complex subunit SNF5
+C      HELX_P36       635    639       5  P18480    SWI/SNF complex subunit SNF5
+C      HELX_P37       641    646       6  P18480    SWI/SNF complex subunit SNF5
+C      HELX_P38       656    663       8  P18480    SWI/SNF complex subunit SNF5
+D      HELX_P39       308    312       5  P32591    Transcription factor TYE2
+D      HELX_P40       320    327       8  P32591    Transcription factor TYE2
+D      HELX_P41       328    331       4  P32591    Transcription factor TYE2
+D      HELX_P42       343    355      13  P32591    Transcription factor TYE2
+D      HELX_P43       374    388      15  P32591    Transcription factor TYE2
+D      HELX_P44       437    444       8  P32591    Transcription factor TYE2
+D      HELX_P45       451    468      18  P32591    Transcription factor TYE2
+D      HELX_P46       518    522       5  P32591    Transcription factor TYE2
+D      HELX_P47       528    542      15  P32591    Transcription factor TYE2
+D      HELX_P48       545    554      10  P32591    Transcription factor TYE2
+D      HELX_P49       557    567      11  P32591    Transcription factor TYE2
+D      HELX_P50       589    594       6  P32591    Transcription factor TYE2
+D      HELX_P51       605    615      11  P32591    Transcription factor TYE2
+D      HELX_P52       619    640      22  P32591    Transcription factor TYE2
+D      HELX_P53       673    741      69  P32591    Transcription factor TYE2
+D      HELX_P54       762    776      15  P32591    Transcription factor TYE2
+E      HELX_P75       310    312       3  P32591    Transcription factor TYE2
+E      HELX_P76       320    327       8  P32591    Transcription factor TYE2
+E      HELX_P77       328    331       4  P32591    Transcription factor TYE2
+E      HELX_P78       339    355      17  P32591    Transcription factor TYE2
+E      HELX_P79       363    371       9  P32591    Transcription factor TYE2
+E      HELX_P80       374    388      15  P32591    Transcription factor TYE2
+E      HELX_P81       433    444      12  P32591    Transcription factor TYE2
+E      HELX_P82       447    468      22  P32591    Transcription factor TYE2
+E      HELX_P83       514    524      11  P32591    Transcription factor TYE2
+E      HELX_P84       528    542      15  P32591    Transcription factor TYE2
+E      HELX_P85       545    554      10  P32591    Transcription factor TYE2
+E      HELX_P86       557    566      10  P32591    Transcription factor TYE2
+E      HELX_P87       591    595       5  P32591    Transcription factor TYE2
+E      HELX_P88       605    616      12  P32591    Transcription factor TYE2
+E      HELX_P89       619    627       9  P32591    Transcription factor TYE2
+E      HELX_P90       637    644       8  P32591    Transcription factor TYE2
+E      HELX_P91       648    747     100  P32591    Transcription factor TYE2
+E      HELX_P92       763    776      14  P32591    Transcription factor TYE2
+H      HELX_P55        56     60       5  P53628    SWI/SNF complex component SWP73
+H      HELX_P56        70    106      37  P53628    SWI/SNF complex component SWP73
+H      HELX_P57       313    319       7  P53628    SWI/SNF complex component SWP73
+H      HELX_P58       324    338      15  P53628    SWI/SNF complex component SWP73
+H      HELX_P59       382    387       6  P53628    SWI/SNF complex component SWP73
+H      HELX_P60       403    408       6  P53628    SWI/SNF complex component SWP73
+H      HELX_P61       457    510      54  P53628    SWI/SNF complex component SWP73
+H      HELX_P62       513    521       9  P53628    SWI/SNF complex component SWP73
+H      HELX_P63       522    531      10  P53628    SWI/SNF complex component SWP73
+H      HELX_P64       544    549       6  P53628    SWI/SNF complex component SWP73
+H      HELX_P65       549    564      16  P53628    SWI/SNF complex component SWP73
+I      HELX_P66        68     81      14  P18888    SWI/SNF complex component SNF6
+I      HELX_P67       102    122      21  P18888    SWI/SNF complex component SNF6
+I      HELX_P68       140    151      12  P18888    SWI/SNF complex component SNF6
+I      HELX_P69       152    154       3  P18888    SWI/SNF complex component SNF6
+J      HELX_P70       230    241      12  P43554    SWI/SNF global transcription activator complex subunit SWP
+J      HELX_P71       284    294      11  P43554    SWI/SNF global transcription activator complex subunit SWP
+J      HELX_P72       329    335       7  P43554    SWI/SNF global transcription activator complex subunit SWP
+J      HELX_P73       450    458       9  P43554    SWI/SNF global transcription activator complex subunit SWP
+J      HELX_P74       465    500      36  P43554    SWI/SNF global transcription activator complex subunit SWP
+
+Per-chain summary:
+  Chain    #Helices    Residues    AvgLen  UniProt     Protein
+  A               5          77      15.4  P22082      ATP-dependent helicase SNF2
+  B              24         331      13.8  P09547      Regulatory protein GAM3
+  C               9         123      13.7  P18480      SWI/SNF complex subunit SNF5
+  D              16         235      14.7  P32591      Transcription factor TYE2
+  E              18         284      15.8  P32591      Transcription factor TYE2
+  H              11         171      15.5  P53628      SWI/SNF complex component SWP73
+  I               4          50      12.5  P18888      SWI/SNF complex component SNF6
+  J               5          75      15.0  P43554      SWI/SNF global transcription activator complex sub
