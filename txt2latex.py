@@ -2,10 +2,11 @@
 """Convert extracted_atoms.txt → inline LaTeX table (no Chain column).
 
 Usage:
-    python txt2latex.py                        # reads extracted_atoms.txt, writes extracted_atoms.tex
-    python txt2latex.py INPUT.txt OUTPUT.tex   # custom paths
+    python txt2latex.py extracted_atoms.txt
+    python txt2latex.py extracted_atoms.txt -o custom.tex
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -109,13 +110,13 @@ def build_latex(target_label, rows, out_path: Path):
 
 
 def main():
-    if len(sys.argv) >= 3:
-        in_path = Path(sys.argv[1])
-        out_path = Path(sys.argv[2])
-    else:
-        base = Path(__file__).resolve().parent
-        in_path = base / "extracted_atoms.txt"
-        out_path = base / "extracted_atoms.tex"
+    parser = argparse.ArgumentParser(description="Convert extracted_atoms.txt to inline LaTeX table (no Chain column).")
+    parser.add_argument("input", type=Path, help="Path to the input extracted_atoms.txt file")
+    parser.add_argument("-o", "--output", type=Path, default=None, help="Output .tex file path (default: replace input suffix with .tex)")
+    args = parser.parse_args()
+
+    in_path: Path = args.input
+    out_path: Path = args.output if args.output is not None else in_path.with_suffix(".tex")
 
     if not in_path.exists():
         print(f"ERROR: input file not found: {in_path}", file=sys.stderr)

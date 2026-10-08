@@ -20,10 +20,10 @@ python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
 # 2. Parse helices from any .cif
-python parse_6ltj_helices.py ~/Downloads/6LTJ.cif --out-dir out/ --prefix 6LTJ
+python parse_helices_2.py ~/Downloads/6LTJ.cif --out-dir out/ --prefix 6LTJ
 
 # 3. Parse ligands
-python parse_4lxz_ligands.py ~/Downloads/4LXZ.cif --out-dir out/
+python parse_ligands.py ~/Downloads/4LXZ.cif --out-dir out/
 
 # 4. Extract atoms within N Å of a target residue + compute N↔O hetero-distances
 python extract_residues.py ~/Downloads/4LXZ.cif \
@@ -65,7 +65,7 @@ script.py INPUT.cif [--out-dir DIR] [--prefix STR] [extra options…]
 - `--prefix` — filename prefix for outputs (default: the CIF filename stem,
   e.g. `7C4J.cif` → prefix `7C4J` → `7C4J_helices.txt` etc).
 
-### `parse_6ltj_helices.py` — helices + per-chain protein/UniProt map
+### `parse_helices_2.py` — helices + per-chain protein / UniProt map
 
 Parses the `_struct_conf` mmCIF category (author-deposited secondary structure,
 *not* recomputed from coordinates).  Recognises α-helices, π-helices, and 3₁₀
@@ -86,16 +86,13 @@ tables so each helix and each chain row is annotated with:
 
 **Usage:**
 ```bash
-python parse_6ltj_helices.py path/to/6LTJ.cif
-python parse_6ltj_helices.py path/to/7EGM.cif --out-dir results --prefix 7EGM
+python parse_helices_2.py path/to/6LTJ.cif
+python parse_helices_2.py path/to/7EGM.cif --out-dir results --prefix 7EGM
 ```
-
-> Despite the name (kept for backwards compatibility), the script is generic —
-> feed it any mmCIF file (6LTJ / 7C4J / 7EGM / your own).
 
 ---
 
-### `parse_7c4j_helices.py` — helices with short protein codes & % helical content
+### `parse_helices.py` — helices with short protein codes & % helical content
 
 Same helix parser as above but with **three extra views** tailored for tables in
 a paper:
@@ -120,12 +117,12 @@ a paper:
 
 **Usage:**
 ```bash
-python parse_7c4j_helices.py path/to/7c4j.cif --out-dir out --prefix 7C4J
+python parse_helices.py path/to/7c4j.cif --out-dir out --prefix 7C4J
 ```
 
 ---
 
-### `parse_4lxz_ligands.py` — ligand & HETATM atom coordinates
+### `parse_ligands.py` — ligand & HETATM atom coordinates
 
 Dumps every **HETATM** residue (all `_atom_site` rows with `group_PDB == HETATM`)
 in the file, one atom per line, split into *two classes*:
@@ -152,10 +149,10 @@ re-filter downstream without re-parsing the CIF.
 **Usage:**
 ```bash
 # Just the "real" ligands (no water / ions)
-python parse_4lxz_ligands.py 4LXZ.cif --out-dir out
+python parse_ligands.py 4LXZ.cif --out-dir out
 
 # Keep water + ions inside the `_sm` output too (all HETATM is always written)
-python parse_4lxz_ligands.py 4LXZ.cif --keep-water-ions-in-sm
+python parse_ligands.py 4LXZ.cif --keep-water-ions-in-sm
 ```
 
 ---
@@ -190,7 +187,7 @@ python extract_residues.py 4LXZ.cif \
 
 ---
 
-### `parse_4myd_residues.py` — selected residues + inter-residue N↔O H-bond table
+### `parse_residues.py` — selected residues + inter-residue N↔O H-bond table
 
 Focused tool: for a list of *specific* residues (default: Chain A Ser86, His232,
 Asp210 — the classic catalytic triad), extracts:
@@ -201,8 +198,14 @@ Asp210 — the classic catalytic triad), extracts:
   - `putative` ≤ `--hbond-cutoff`  Å (default 3.5)
   - `long-range` otherwise
 
-Target residues are supplied as repeatable `--residue SEQ:RESNAME:LABEL`,
-e.g. `--residue 86:SER:Ser86 --residue 232:HIS:His232`.
+**Three ways to choose the target residues:**
+
+1. **Interactively** — run the script with no `--residue` and it prompts for a
+   chain + residues one-by-one.  Blank first entry → uses the default triad.
+2. **On the command line** — repeatable `--residue SEQ:RESNAME:LABEL`,
+   e.g. `--residue 86:SER:Ser86 --residue 232:HIS:His232` (skips the prompt).
+3. **Non-interactive default** — add `--no-prompt` to skip prompts entirely and
+   fall back to the built-in catalytic Ser-His-Asp triad.
 
 **Outputs:**
 
@@ -213,11 +216,14 @@ e.g. `--residue 86:SER:Ser86 --residue 232:HIS:His232`.
 
 **Usage:**
 ```bash
-# Default triad on chain A of 4MYD
-python parse_4myd_residues.py 4MYD.cif --out-dir out
+# 1. Interactive mode: prompts for chain + residues (good for exploration)
+python parse_residues.py 4MYD.cif --out-dir out
 
-# Custom set (catalytic Ser-His-Asp in another PDB, e.g. chain A, residues 195, 57, 102)
-python parse_4myd_residues.py 1GCI.cif \
+# 2. Non-interactive: same default triad, guaranteed no TTY prompts (CI / scripts)
+python parse_residues.py 4MYD.cif --out-dir out --no-prompt
+
+# 3. Fully explicit command-line set (catalytic Ser-His-Asp in another PDB)
+python parse_residues.py 1GCI.cif \
        --chain A \
        --residue 195:SER:Ser195 \
        --residue 57:HIS:His57 \

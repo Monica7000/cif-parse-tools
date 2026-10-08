@@ -1,32 +1,27 @@
 #!/usr/bin/env python3
-"""Parse 4MYD.cif: extract all atoms for Chain A Ser86, His232, Asp210
+"""Parse a mmCIF file: extract all atoms for selected chain/residues
    and calculate all inter-residue N↔O hydrogen-bond-like distances
-   between these three residues.
+   between them.
 
 Outputs:
-    - 4myd_selected_residues.txt  : per-atom coordinates
-    - 4myd_selected_residues.tex  : inline LaTeX table
-    - 4myd_NO_hbonds.txt          : inter-residue N↔O pair distances
+    - {prefix}_selected_residues.txt  : per-atom coordinates
+    - {prefix}_selected_residues.tex  : inline LaTeX table
+    - {prefix}_NO_hbonds.txt          : inter-residue N↔O pair distances
 """
 
+import argparse
 from pathlib import Path
 from itertools import combinations
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
-CIF_FILE = "/Users/becke410/Downloads/4MYD.cif"
-TARGET_CHAIN = "A"
-TARGET_RESIDUES = [
+DEFAULT_TARGET_RESIDUES = [
     (86,  "SER", "Ser86"),
     (232, "HIS", "His232"),
     (210, "ASP", "Asp210"),
 ]
-OUT_TXT     = "/Users/becke410/Eval_code/4myd_selected_residues.txt"
-OUT_TEX     = "/Users/becke410/Eval_code/4myd_selected_residues.tex"
-OUT_HBONDS  = "/Users/becke410/Eval_code/4myd_NO_hbonds.txt"
 
-# H-bond geometric cutoffs (standard: 2.5–3.5 Å is typical for N-O)
-HBOND_STRONG_CUTOFF = 3.0   # ≤ 3.0 Å → strong
-HBOND_CUTOFF        = 3.5   # ≤ 3.5 Å → putative H-bond (moderate/weak)
+DEFAULT_HBOND_STRONG_CUTOFF = 3.0
+DEFAULT_HBOND_CUTOFF        = 3.5
 
 
 def parse_atoms(cif_path):
@@ -116,15 +111,15 @@ def collect_ON(res_atoms):
     return out
 
 
-def classify(d):
-    if d <= HBOND_STRONG_CUTOFF:
+def classify(d, strong_cutoff, hbond_cutoff):
+    if d <= strong_cutoff:
         return "strong"
-    if d <= HBOND_CUTOFF:
+    if d <= hbond_cutoff:
         return "putative"
     return "long-range"
 
 
-def compute_inter_res_NO_hbonds(blocks):
+def compute_inter_res_NO_hbonds(blocks, strong_cutoff, hbond_cutoff):
     """Compute all cross-residue N↔O pair distances for every residue pair.
 
     Skips pairs within the same residue. Returns sorted list of dicts:
@@ -154,20 +149,20 @@ def compute_inter_res_NO_hbonds(blocks):
                     "acc_atom":   acc_atom,
                     "dist":       d,
                     "direction":  direction,
-                    "type":       classify(d),
+                    "type":       classify(d, strong_cutoff, hbond_cutoff),
                 })
     results.sort(key=lambda r: r["dist"])
     return results
 
 
-def write_hbond_report(hbonds, path: Path):
+def write_hbond_report(hbonds, path: Path, chain, target_residues, strong_cutoff, hbond_cutoff):
     header = (
         f"{'D_res':<8}{'A_res':<8}{'D_atom':<12}{'A_atom':<12}"
         f"{'Dist(Å)':>10}  {'Type':<10}  Direction"
     )
     lines = [
-        f"Inter-residue N↔O distances for {', '.join(d for *_, d in TARGET_RESIDUES)} (Chain A)",
-        f"Cutoffs: strong ≤ {HBOND_STRONG_CUTOFF}Å, putative ≤ {HBOND_CUTOFF}Å, else 'long-range'.",
+        f"Inter-residue N↔O distances for {', '.join(d for *_, d in target_residues)} (Chain {chain})",
+        f"Cutoffs: strong ≤ {strong_cutoff}Å, putative ≤ {hbond_cutoff}Å, else 'long-range'.",
         "",
         f"{'='*len(header)}",
         header,
@@ -187,9 +182,9 @@ def write_hbond_report(hbonds, path: Path):
         putativ = sum(1 for h in hbonds if h["type"] == "putative")
         long_r  = sum(1 for h in hbonds if h["type"] == "long-range")
         lines.append(f"Total N↔O pairs: {len(hbonds)}")
-        lines.append(f"  strong   (≤ {HBOND_STRONG_CUTOFF}Å): {strong}")
-        lines.append(f"  putative (≤ {HBOND_CUTOFF}Å):        {putativ}")
-        lines.append(f"  long-range (>{HBOND_CUTOFF}Å):       {long_r}")
+        lines.append(f"  strong   (≤ {strong_cutoff}Å): {strong}")
+        lines.append(f"  putative (≤ {hbond_cutoff}Å):        {putativ}")
+        lines.append(f"  long-range (>{hbond_cutoff}Å):       {long_r}")
     path.write_text("\n".join(lines) + "\n")
 
 
@@ -207,7 +202,7 @@ def write_txt(blocks, path: Path):
     path.write_text("\n".join(lines) + "\n")
 
 
-def write_latex(blocks, path: Path):
+def write_latex(blocks, path: Path, chain, prefix):
     tex = []
     tex.append(r"% Inline LaTeX table — requires \usepackage{booktabs,graphicx} in preamble.")
     tex.append(r"\begin{table}[htbp]")
@@ -230,7 +225,7 @@ def write_latex(blocks, path: Path):
             first = False
         else:
             tex.append(r"\cmidrule(lr){1-6}")
-        title = f"{display_name} (Chain A, Res {seq_id}, {resname})"
+        title = f"{display_name} (Chain {chain}, Res {seq_id}, {resname})"
         tex.append("\\multicolumn{6}{@{}l}{\\textbf{" + title + "}} \\\\")
         tex.append(r"\cmidrule(r){1-6}")
         for a in atoms:
@@ -242,19 +237,177 @@ def write_latex(blocks, path: Path):
     tex.append(r"\bottomrule")
     tex.append(r"\end{tabular}%")
     tex.append(r"}")
+    res_labels = "_".join(d.lower() for d, _, _ in blocks)
     caption = (
-        f"Atoms of 4MYD chain A {', '.join(d for d, _, _ in blocks)}; "
+        f"Atoms of {prefix} chain {chain} {', '.join(d for d, _, _ in blocks)}; "
         f"total {all_rows} atoms. Coordinates in \\AA ngstr\\\"oms."
     )
     tex.append(f"\\caption{{{caption}}}")
-    tex.append(r"\label{tab:4myd_ser86_his232_asp210}")
+    tex.append(f"\\label{{tab:{prefix}_{res_labels}}}")
     tex.append(r"\end{table}")
     path.write_text("\n".join(tex) + "\n")
 
 
+def parse_residue_spec(spec):
+    parts = spec.split(":")
+    if len(parts) < 3:
+        raise argparse.ArgumentTypeError(
+            f"Residue spec '{spec}' must be in format SeqID:RES:LABEL (e.g. 86:SER:Ser86)"
+        )
+    try:
+        seq_id = int(parts[0])
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"Invalid sequence ID '{parts[0]}' in residue spec '{spec}'"
+        )
+    res_name = parts[1].upper()
+    label = parts[2]
+    return (seq_id, res_name, label)
+
+
+def _validate_spec_parts(seq_id_s, res_name, label):
+    try:
+        seq_id = int(seq_id_s)
+    except ValueError:
+        return None, f"Invalid sequence number '{seq_id_s}' (must be integer)."
+    if not res_name:
+        return None, "Residue name cannot be empty."
+    if not label:
+        return None, "Label cannot be empty."
+    return (seq_id, res_name.upper(), label), None
+
+
+def prompt_target_residues(default_chain):
+    """Interactively prompt the user for one or more target residues.
+
+    Returns (chain_id, residues_list) where residues_list is list of (seq_id, RES, label).
+    Empty first response => fall back to DEFAULT_TARGET_RESIDUES.
+    """
+    print("=== Interactive target-residue input ===")
+    print("(If you pass --residue on the command line, this prompt is skipped.)")
+    chain_in = input(f"Chain ID [default: {default_chain}]: ").strip()
+    chain = chain_in if chain_in else default_chain
+
+    default_specs = ", ".join(
+        f"{s}:{r}:{lbl}" for (s, r, lbl) in DEFAULT_TARGET_RESIDUES
+    )
+    print()
+    print("Enter residues one per line in format:  SeqID:RES:LABEL")
+    print(f"  e.g.  86:SER:Ser86   232:HIS:His232   210:ASP:Asp210")
+    print("Press ENTER on a blank line when done.")
+    print(f"(Leave all blank to use the default set: {default_specs})")
+    print()
+
+    residues = []
+    n = 0
+    while True:
+        n += 1
+        raw = input(f"  Residue #{n} [leave blank to finish]: ").strip()
+        if not raw:
+            if n == 1:
+                print(f"  → Using default residues: {default_specs}")
+                return chain, list(DEFAULT_TARGET_RESIDUES)
+            break
+        parts = raw.split(":")
+        if len(parts) < 3:
+            print(f"    ❌ Format error: use SeqID:RES:LABEL  (got '{raw}'). Try again.")
+            n -= 1
+            continue
+        spec, err = _validate_spec_parts(parts[0], parts[1], ":".join(parts[2:]))
+        if err:
+            print(f"    ❌ {err} Try again.")
+            n -= 1
+            continue
+        residues.append(spec)
+        seq_id, res_name, label = spec
+        print(f"    ✅ Added {label} = ({seq_id}, {res_name}).")
+
+    if not residues:
+        return chain, list(DEFAULT_TARGET_RESIDUES)
+
+    print(f"\nCollected {len(residues)} target residues on chain {chain}.")
+    return chain, residues
+
+
 def main():
-    atoms = parse_atoms(CIF_FILE)
-    blocks = select_targets(atoms, TARGET_CHAIN, TARGET_RESIDUES)
+    parser = argparse.ArgumentParser(
+        description="Extract selected residues from a mmCIF file and compute "
+                    "inter-residue N↔O hydrogen-bond distances."
+                    " If --residue is omitted you will be prompted interactively."
+    )
+    parser.add_argument(
+        "cif",
+        type=Path,
+        help="Path to the input mmCIF (.cif) file"
+    )
+    parser.add_argument(
+        "--chain",
+        type=str,
+        default="A",
+        help='Target chain ID (default: "A"; can be overridden interactively)'
+    )
+    parser.add_argument(
+        "--residue",
+        action="append",
+        type=parse_residue_spec,
+        default=None,
+        metavar="SEQID:RES:LABEL",
+        help="Residue spec in format SeqID:RES:LABEL (repeatable, skips prompt). "
+             "Example: --residue 86:SER:Ser86 --residue 232:HIS:His232"
+    )
+    parser.add_argument(
+        "--no-prompt",
+        action="store_true",
+        help="Never prompt; fall back to DEFAULT_TARGET_RESIDUES if --residue is missing."
+    )
+    parser.add_argument(
+        "--out-dir",
+        type=Path,
+        default=None,
+        help="Output directory (default: current working directory)"
+    )
+    parser.add_argument(
+        "--prefix",
+        type=str,
+        default=None,
+        help="Prefix for output filenames (default: stem of cif file)"
+    )
+    parser.add_argument(
+        "--strong-cutoff",
+        type=float,
+        default=DEFAULT_HBOND_STRONG_CUTOFF,
+        help=f"Strong H-bond distance cutoff in Å (default: {DEFAULT_HBOND_STRONG_CUTOFF})"
+    )
+    parser.add_argument(
+        "--hbond-cutoff",
+        type=float,
+        default=DEFAULT_HBOND_CUTOFF,
+        help=f"Putative H-bond distance cutoff in Å (default: {DEFAULT_HBOND_CUTOFF})"
+    )
+    args = parser.parse_args()
+
+    cif_path = args.cif
+    if args.residue:
+        chain = args.chain
+        target_residues = list(args.residue)
+    elif args.no_prompt:
+        chain = args.chain
+        target_residues = list(DEFAULT_TARGET_RESIDUES)
+    else:
+        chain, target_residues = prompt_target_residues(args.chain)
+
+    prefix = args.prefix or cif_path.stem
+    out_dir = args.out_dir or Path.cwd()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    strong_cutoff = args.strong_cutoff
+    hbond_cutoff = args.hbond_cutoff
+
+    out_txt = out_dir / f"{prefix}_selected_residues.txt"
+    out_tex = out_dir / f"{prefix}_selected_residues.tex"
+    out_hbonds = out_dir / f"{prefix}_NO_hbonds.txt"
+
+    atoms = parse_atoms(str(cif_path))
+    blocks = select_targets(atoms, chain, target_residues)
 
     for display, seq_id, block in blocks:
         on_atoms = collect_ON(block)
@@ -263,23 +416,21 @@ def main():
         print(f"{display} (Res {seq_id}): {len(block)} atoms  "
               f"(O={n_O}, N={n_N})")
 
-    write_txt(blocks, Path(OUT_TXT))
-    print(f"Wrote coordinate text  → {OUT_TXT}")
+    write_txt(blocks, out_txt)
+    print(f"Wrote coordinate text  → {out_txt}")
 
-    write_latex(blocks, Path(OUT_TEX))
-    print(f"Wrote coordinate LaTeX → {OUT_TEX}")
+    write_latex(blocks, out_tex, chain, prefix)
+    print(f"Wrote coordinate LaTeX → {out_tex}")
 
-    # ----- Inter-residue N↔O H-bonds -----
-    hbonds = compute_inter_res_NO_hbonds(blocks)
-    write_hbond_report(hbonds, Path(OUT_HBONDS))
-    print(f"Wrote N↔O H-bond list  → {OUT_HBONDS}")
+    hbonds = compute_inter_res_NO_hbonds(blocks, strong_cutoff, hbond_cutoff)
+    write_hbond_report(hbonds, out_hbonds, chain, target_residues, strong_cutoff, hbond_cutoff)
+    print(f"Wrote N↔O H-bond list  → {out_hbonds}")
 
-    # Print a compact summary to stdout
-    print("\n--- N↔O distance summary (<=3.5Å only) ---")
-    short = [h for h in hbonds if h["dist"] <= HBOND_CUTOFF]
+    print("\n--- N↔O distance summary (<=%.1fÅ only) ---" % hbond_cutoff)
+    short = [h for h in hbonds if h["dist"] <= hbond_cutoff]
     if not short:
         print("  (no N↔O pairs within the putative H-bond cutoff of "
-              f"{HBOND_CUTOFF}Å)")
+              f"{hbond_cutoff}Å)")
     else:
         for h in short:
             print(f"  {h['dist']:.3f} Å  {h['type']:<9s}  {h['direction']}")

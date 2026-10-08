@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-import os
+import argparse
+from pathlib import Path
 from collections import defaultdict
 import numpy as np
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
-
-CIF_FILE = "/Users/becke410/Downloads/4LXZ.cif"
-TARGET_CHAIN = "A"
-TARGET_RESID = 301
-DISTANCE_CUTOFF = 3.5
 
 
 def parse_atoms(cif_path):
@@ -138,17 +134,33 @@ def compute_NO_distances(target_atoms, surrounding_res_atoms):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Extract residues within a distance cutoff from a target residue in a CIF file.")
+    parser.add_argument("cif", type=Path, help="Path to the input CIF file")
+    parser.add_argument("--chain", type=str, default="A", help="Target chain ID (default: A)")
+    parser.add_argument("--resid", type=int, default=301, help="Target residue ID (default: 301)")
+    parser.add_argument("--cutoff", type=float, default=3.5, help="Distance cutoff in Angstroms (default: 3.5)")
+    parser.add_argument("--out-dir", type=Path, default=None, help="Output directory (default: current working directory)")
+    parser.add_argument("--prefix", type=str, default=None, help="Output file prefix (default: CIF file stem)")
+    args = parser.parse_args()
+
+    cif_path: Path = args.cif
+    prefix = args.prefix or cif_path.stem
+    out_dir: Path = args.out_dir or Path.cwd()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    output_file: Path = out_dir / f"{prefix}_extracted_atoms.txt"
+    dist_out: Path = out_dir / f"{prefix}_hetero_distances.txt"
+
     print("Parsing CIF file...")
-    atoms = parse_atoms(CIF_FILE)
+    atoms = parse_atoms(str(cif_path))
     print(f"Total atoms parsed: {len(atoms)}")
 
     target_atoms = [
         a for a in atoms
-        if a["chain"] == TARGET_CHAIN and a["resid"] == TARGET_RESID
+        if a["chain"] == args.chain and a["resid"] == args.resid
     ]
 
     if not target_atoms:
-        print(f"Error: Could not find chain {TARGET_CHAIN} residue {TARGET_RESID}")
+        print(f"Error: Could not find chain {args.chain} residue {args.resid}")
         print("Available chains and residue range:")
         chain_res = defaultdict(list)
         for a in atoms:
@@ -161,9 +173,9 @@ def main():
     target_resname = target_atoms[0]["resname"]
     target_O = sum(1 for a in target_atoms if atom_element_ON(a["atom_name"]) == "O")
     target_N = sum(1 for a in target_atoms if atom_element_ON(a["atom_name"]) == "N")
-    print(f"\nTarget: Chain {TARGET_CHAIN}, Residue {TARGET_RESID} ({target_resname}) "
+    print(f"\nTarget: Chain {args.chain}, Residue {args.resid} ({target_resname}) "
           f"with {len(target_atoms)} atoms ({target_O} O, {target_N} N)")
-    print(f"Searching for atoms within {DISTANCE_CUTOFF}Å...  "
+    print(f"Searching for atoms within {args.cutoff}Å...  "
           f"(heteroatom distance table will show **N↔O cross pairs only**)\n")
 
     coords_all = np.array([[a["x"], a["y"], a["z"]] for a in atoms], dtype=np.float64)
@@ -172,7 +184,7 @@ def main():
     diff = coords_all[:, np.newaxis, :] - coords_target[np.newaxis, :, :]
     dist_matrix = np.sqrt(np.sum(diff ** 2, axis=2))
     min_dist_per_atom = dist_matrix.min(axis=1)
-    nearby_mask = min_dist_per_atom <= DISTANCE_CUTOFF
+    nearby_mask = min_dist_per_atom <= args.cutoff
 
     selected_indices = np.where(nearby_mask)[0]
 
@@ -185,7 +197,7 @@ def main():
         key = (a["chain"], a["resid"], a["icode"], a["resname"])
         residue_keys.add(key)
         res_key_to_atoms[key].append(a)
-        if a["chain"] == TARGET_CHAIN and a["resid"] == TARGET_RESID:
+        if a["chain"] == args.chain and a["resid"] == args.resid:
             target_key = key
 
     sorted_residue_keys = sorted(
@@ -205,7 +217,7 @@ def main():
 
     output_lines = [header]
     summary_rows = []
-    distance_block = []  # per-residue heteroatom O/N distances to ligand O/N
+    distance_block = []
 
     for key in sorted_residue_keys:
         chain_id, resid, icode, resname = key
@@ -224,8 +236,7 @@ def main():
 
     print("-" * 80)
 
-    output_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extracted_atoms.txt")
-    with open(output_file, "w") as f:
+    with output_file.open("w") as f:
         f.write("\n".join(output_lines) + "\n")
     print(f"\nResults saved to: {output_file}")
 
@@ -238,8 +249,7 @@ def main():
         role = "TARGET" if key == target_key else "SURROUNDING"
         print(f"{chain_id:<6}{resid_str:<8}{resname:<10}{num_atoms:<8}{role}")
 
-    # --- Heteroatom N↔O (cross pairs only) distance block ---
-    lig_label = f"{TARGET_CHAIN}:{TARGET_RESID}({target_resname})"
+    lig_label = f"{args.chain}:{args.resid}({target_resname})"
     dist_header = (
         f"\n\n=== N↔O cross heteroatom distances to ligand {lig_label} ==="
         f"\n{'Chain':<6}{'ResID':<8}{'ResName':<10}"
@@ -277,8 +287,7 @@ def main():
             print(line)
             dist_lines.append(line)
 
-    dist_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hetero_distances.txt")
-    with open(dist_out, "w") as f:
+    with dist_out.open("w") as f:
         f.write("\n".join(dist_lines) + "\n")
     print(f"\nN↔O cross heteroatom distances saved to: {dist_out}  "
           f"({total_pairs} pair{'s' if total_pairs != 1 else ''})")

@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
-"""Parse helix information (alpha helix / pi helix / 3_10 helix) from 6LTJ.cif.
+"""Parse helix information (alpha helix / pi helix / 3_10 helix) from an mmCIF file.
 
 Source: mmCIF category `_struct_conf` (secondary structure annotations provided
 by the PDB authors, not recomputed from coordinates).
 
-Outputs:
-    6ltj_helices.txt : human-readable table (chain | id | start | end | length | type)
-    6ltj_helices.tex : inline LaTeX fragment (paste into a paper)
-    6ltj_helices.csv : CSV (chain,id,beg,beg_ins,end,end_ins,length,type,details)
+Outputs (derived from CIF filename by default, override with --out-dir / --prefix):
+    <PREFIX>_helices.txt  : human-readable table (chain | id | start | end | length | type)
+    <PREFIX>_helices.tex  : inline LaTeX fragment (paste into a paper)
+    <PREFIX>_helices.csv  : CSV (chain,id,beg,beg_ins,end,end_ins,length,type,details)
+    <PREFIX>_chains.{txt,tex,csv} : per-chain protein name + UniProt map
+
+Usage:
+    python parse_helices_2.py path/to/structure.cif
+    python parse_helices_2.py path/to/structure.cif --out-dir results/ --prefix 7C4J
 """
 
-from pathlib import Path
+import argparse
 import csv
 from collections import defaultdict
-from Bio.PDB.MMCIF2Dict import MMCIF2Dict
+from pathlib import Path
 
-CIF_FILE = "/Users/becke410/Downloads/7C4J.cif"
-OUT_TXT  = "/Users/becke410/Eval_code/7C4J_helices.txt"
-OUT_TEX  = "/Users/becke410/Eval_code/7C4J_helices.tex"
-OUT_CSV  = "/Users/becke410/Eval_code/7C4J_helices.csv"
-OUT_CHAINS_TXT = "/Users/becke410/Eval_code/7C4J_chains.txt"
-OUT_CHAINS_TEX = "/Users/becke410/Eval_code/7C4J_chains.tex"
-OUT_CHAINS_CSV = "/Users/becke410/Eval_code/7C4J_chains.csv"
+from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
 NON_HELIX_PREFIX = ("SHEET", "STRN", "TURN")
 
@@ -116,7 +115,7 @@ def _fmt_res(seq, ins):
     return f"{seq}{ins}" if ins else str(seq)
 
 
-def write_txt(helices, path: Path):
+def write_txt(helices, path: Path, *, cif_name: str = ""):
     per_chain = defaultdict(list)
     for h in helices:
         per_chain[h["chain"]].append(h)
@@ -125,7 +124,7 @@ def write_txt(helices, path: Path):
               f"{'UniProt':<10}{'Protein'}")
     L = len(header) + 40
     lines = []
-    lines.append(f"Helices extracted from {Path(CIF_FILE).name}")
+    lines.append(f"Helices extracted from {cif_name or Path(path).name}")
     lines.append(f"Total helices: {len(helices)}   "
                  f"Chains with helices: {sorted(per_chain.keys())}")
     lines.append("")
@@ -154,9 +153,10 @@ def write_txt(helices, path: Path):
     path.write_text("\n".join(lines) + "\n")
 
 
-def write_tex(helices, path: Path):
+def write_tex(helices, path: Path, *, prefix: str = ""):
+    pdb = prefix.upper() or "PDB"
     lines = []
-    lines.append(r"% Helix table for 6LTJ.cif with protein name & UniProt")
+    lines.append(f"% Helix table for {pdb}.cif with protein name & UniProt")
     lines.append(r"% \usepackage{booktabs} required")
     lines.append(r"\begin{longtable}{@{}llrrrrllp{5.2cm}@{}}")
     lines.append(r"  \toprule")
@@ -171,8 +171,8 @@ def write_tex(helices, path: Path):
     lines.append(r"  \bottomrule")
     lines.append(r"  \endfoot")
     lines.append(r"  \bottomrule")
-    lines.append(r"  \caption{Helices in PDB 6LTJ with chain-level protein names and UniProt accessions.}")
-    lines.append(r"  \label{tab:6ltj_helices_uniprot}")
+    lines.append(fr"  \caption{{Helices in PDB {pdb} with chain-level protein names and UniProt accessions.}}")
+    lines.append(fr"  \label{{tab:{prefix.lower()}_helices_uniprot}}")
     lines.append(r"  \endlastfoot")
     for h in helices:
         prot = (h.get("protein") or "").split(",", 1)[0]
@@ -317,12 +317,12 @@ def parse_chain_proteins(d):
     return rows
 
 
-def write_chains_txt(rows, path: Path):
+def write_chains_txt(rows, path: Path, *, cif_name: str = ""):
     header = (f"{'Chain':<7}{'Entity':>6}  {'UniProt':<12}{'db_code':<18}"
               f"{'Organism':<30}  Protein name")
     L = len(header) + 30
     lines = [
-        f"Chain / protein / UniProt map for {Path(CIF_FILE).name}",
+        f"Chain / protein / UniProt map for {cif_name or Path(path).name}",
         f"Total chains: {len(rows)}",
         "", "=" * L, header, "-" * L,
     ]
@@ -338,9 +338,10 @@ def write_chains_txt(rows, path: Path):
     path.write_text("\n".join(lines) + "\n")
 
 
-def write_chains_tex(rows, path: Path):
+def write_chains_tex(rows, path: Path, *, prefix: str = ""):
+    pdb = prefix.upper() or "PDB"
     lines = []
-    lines.append(r"% Per-chain protein name + UniProt for 6LTJ.cif")
+    lines.append(f"% Per-chain protein name + UniProt for {pdb}.cif")
     lines.append(r"% \usepackage{booktabs} required")
     lines.append(r"\begin{table}[htbp]")
     lines.append(r"  \centering\small")
@@ -360,9 +361,9 @@ def write_chains_tex(rows, path: Path):
         )
     lines.append(r"    \bottomrule")
     lines.append(r"  \end{tabular}")
-    lines.append(r"  \caption{Protein chains of PDB 6LTJ with their UniProt "
+    lines.append(fr"  \caption{{Protein chains of PDB {pdb} with their UniProt "
                  r"accessions and source organisms.}")
-    lines.append(r"  \label{tab:6ltj_chains_uniprot}")
+    lines.append(fr"  \label{{tab:{prefix.lower()}_chains_uniprot}}")
     lines.append(r"\end{table}")
     path.write_text("\n".join(lines) + "\n")
 
@@ -376,15 +377,53 @@ def write_chains_csv(rows, path: Path):
             w.writerow({k: r.get(k, "") for k in fields})
 
 
+def _build_arg_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        description="Parse helix records (_struct_conf) and per-chain protein "
+                    "/ UniProt information from an mmCIF file.",
+    )
+    p.add_argument(
+        "cif", type=Path,
+        help="Path to the input mmCIF file (e.g. /path/to/structure.cif).",
+    )
+    p.add_argument(
+        "--out-dir", type=Path, default=None,
+        help="Directory for output files (default: same dir as the CIF file).",
+    )
+    p.add_argument(
+        "--prefix", type=str, default=None,
+        help="Output filename prefix (default: CIF filename stem, e.g. '7C4J').",
+    )
+    return p
+
+
 def main():
-    d = MMCIF2Dict(CIF_FILE)
+    args = _build_arg_parser().parse_args()
+
+    cif_path: Path = args.cif
+    if not cif_path.exists():
+        raise SystemExit(f"ERROR: cif file not found: {cif_path}")
+
+    cif_name = cif_path.name
+    prefix = args.prefix or cif_path.stem
+    out_dir = args.out_dir or cif_path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    OUT_TXT  = out_dir / f"{prefix}_helices.txt"
+    OUT_TEX  = out_dir / f"{prefix}_helices.tex"
+    OUT_CSV  = out_dir / f"{prefix}_helices.csv"
+    OUT_CHAINS_TXT = out_dir / f"{prefix}_chains.txt"
+    OUT_CHAINS_TEX = out_dir / f"{prefix}_chains.tex"
+    OUT_CHAINS_CSV = out_dir / f"{prefix}_chains.csv"
+
+    d = MMCIF2Dict(str(cif_path))
 
     # --- Chain/Protein info (entity → chains + protein name + UniProt) ---
     chains_info = parse_chain_proteins(d)
     chains_by_asym = {c["chain"]: c for c in chains_info}
 
     per_chain_order = [c["chain"] for c in chains_info]
-    print(f"\n=== Protein chains (with UniProt) from {Path(CIF_FILE).name} ===")
+    print(f"\n=== Protein chains (with UniProt) from {cif_name} ===")
     print(f"{'Chain':<7}{'Entity':>6}  {'UniProt':<10}{'db_code':<16}{'Organism':<28}  Protein name")
     print("-" * 120)
     for c in chains_info:
@@ -433,16 +472,16 @@ def main():
 
     # --- Writers ---
     if helices:
-        write_txt(helices, Path(OUT_TXT))
-        write_tex(helices, Path(OUT_TEX))
+        write_txt(helices, Path(OUT_TXT), cif_name=cif_name)
+        write_tex(helices, Path(OUT_TEX), prefix=prefix)
         write_csv(helices, Path(OUT_CSV))
         print()
         print(f"Wrote helix TXT → {OUT_TXT}")
         print(f"Wrote helix TEX → {OUT_TEX}")
         print(f"Wrote helix CSV → {OUT_CSV}")
 
-    write_chains_txt(chains_info, Path(OUT_CHAINS_TXT))
-    write_chains_tex(chains_info, Path(OUT_CHAINS_TEX))
+    write_chains_txt(chains_info, Path(OUT_CHAINS_TXT), cif_name=cif_name)
+    write_chains_tex(chains_info, Path(OUT_CHAINS_TEX), prefix=prefix)
     write_chains_csv(chains_info, Path(OUT_CHAINS_CSV))
     print(f"Wrote chains TXT → {OUT_CHAINS_TXT}")
     print(f"Wrote chains TEX → {OUT_CHAINS_TEX}")

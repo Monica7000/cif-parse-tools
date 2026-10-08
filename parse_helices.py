@@ -1,31 +1,22 @@
 #!/usr/bin/env python3
-"""Parse helices from 7c4j.cif and produce TWO table variants.
+"""Parse helices from ANY mmCIF file and produce TWO table variants.
 
 Variant 1 (simple):  Protein name + Helix Start + Helix End
 Variant 2 (detailed): Protein name + Helix Start + Helix End + Helix Length
                       + footer: per-subunit total helix length
 
-Outputs (txt + inline LaTeX):
-    7C4J_helices_v1.txt / .tex      # protein name | start | end
-    7C4J_helices_v2.txt / .tex      # protein name | start | end | length + per-subunit totals
-    7C4J_helices.csv                # combined raw data (csv, chain/entity/uniprot/protein/beg/end/length/type)
+Outputs (txt + inline LaTeX + csv):
+    {prefix}_helices_v1.txt / .tex       # protein name | start | end
+    {prefix}_helices_v2.txt / .tex       # protein name | start | end | length + per-subunit totals
+    {prefix}_helices.csv                 # combined raw data (csv, chain/entity/uniprot/protein/beg/end/length/type)
+    {prefix}_protein_aa_summary.txt / .tex / .csv
 """
 
 from pathlib import Path
+import argparse
 import csv
 from collections import defaultdict, OrderedDict
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
-
-CIF_FILE = "/Users/becke410/Downloads/7c4j.cif"
-
-OUT_V1_TXT = "/Users/becke410/Eval_code/7C4J_helices_v1.txt"
-OUT_V1_TEX = "/Users/becke410/Eval_code/7C4J_helices_v1.tex"
-OUT_V2_TXT = "/Users/becke410/Eval_code/7C4J_helices_v2.txt"
-OUT_V2_TEX = "/Users/becke410/Eval_code/7C4J_helices_v2.tex"
-OUT_CSV    = "/Users/becke410/Eval_code/7C4J_helices.csv"
-OUT_AA_TXT = "/Users/becke410/Eval_code/7C4J_protein_aa_summary.txt"
-OUT_AA_TEX = "/Users/becke410/Eval_code/7C4J_protein_aa_summary.tex"
-OUT_AA_CSV = "/Users/becke410/Eval_code/7C4J_protein_aa_summary.csv"
 
 NON_HELIX_PREFIX = ("SHEET", "STRN", "TURN")
 
@@ -278,10 +269,10 @@ def _short_protein_code(name):
     return _short_protein(name)[:12]
 
 
-def write_v1_txt(helices, path: Path):
+def write_v1_txt(helices, path: Path, prefix: str=""):
     header = f"{'Protein code':<16}{'Helix start':>14}{'Helix end':>12}"
     lines = [
-        f"7C4J helices — variant 1 (protein CODE only: SWP73/SNF2 style).  Total helices: {len(helices)}",
+        f"{prefix.upper()} helices — variant 1 (protein CODE only: SWP73/SNF2 style).  Total helices: {len(helices)}",
         "", "=" * len(header), header, "-" * len(header),
     ]
     for h in helices:
@@ -294,9 +285,9 @@ def write_v1_txt(helices, path: Path):
     path.write_text("\n".join(lines) + "\n")
 
 
-def write_v1_tex(helices, path: Path):
+def write_v1_tex(helices, path: Path, prefix: str=""):
     lines = [
-        r"% Variant 1: short protein CODE (SWP73 / SNF2 / ... style) + start + end (7C4J)",
+        rf"% Variant 1: short protein CODE (SWP73 / SNF2 / ... style) + start + end ({prefix.lower()})",
         r"% Requires: \usepackage{booktabs,longtable}",
         r"\begin{longtable}{@{}lrr@{}}",
         r"  \toprule",
@@ -309,8 +300,8 @@ def write_v1_tex(helices, path: Path):
         r"  \bottomrule",
         r"  \endfoot",
         r"  \bottomrule",
-        r"  \caption{Helices of PDB 7C4J using short protein codes (e.g. SWP73, SNF2, ARP7).}",
-        r"  \label{tab:7c4j_helices_v1}",
+        rf"  \caption{{Helices of PDB {prefix.upper()} using short protein codes (e.g. SWP73, SNF2, ARP7).}}",
+        rf"  \label{{tab:{prefix.lower()}_helices_v1}}",
         r"  \endlastfoot",
     ]
     for h in helices:
@@ -324,7 +315,7 @@ def write_v1_tex(helices, path: Path):
     path.write_text("\n".join(lines) + "\n")
 
 
-def write_v2_txt(helices, path: Path):
+def write_v2_txt(helices, path: Path, prefix: str=""):
     subunit_len = defaultdict(int)
     subunit_cnt = defaultdict(int)
     subunit_aa  = {}
@@ -340,7 +331,7 @@ def write_v2_txt(helices, path: Path):
     header = (f"{'Subunit (Chain)':<40}{'Helix start':>13}"
               f"{'Helix end':>12}{'Length':>9}")
     lines = [
-        f"7C4J helices — variant 2 (subunit name + chain | start | end | length).  "
+        f"{prefix.upper()} helices — variant 2 (subunit name + chain | start | end | length).  "
         f"Total helices: {len(helices)}",
         "", "=" * len(header), header, "-" * len(header),
     ]
@@ -385,7 +376,7 @@ def write_v2_txt(helices, path: Path):
     path.write_text("\n".join(lines) + "\n")
 
 
-def write_v2_tex(helices, path: Path):
+def write_v2_tex(helices, path: Path, prefix: str=""):
     subunit_len = defaultdict(int)
     subunit_cnt = defaultdict(int)
     subunit_aa  = {}
@@ -412,8 +403,8 @@ def write_v2_tex(helices, path: Path):
         r"  \bottomrule",
         r"  \endfoot",
         r"  \bottomrule",
-        r"  \caption{Helices of PDB 7C4J with per-subunit total helix length, total amino acids, and \% helical content.}",
-        r"  \label{tab:7c4j_helices_v2}",
+        rf"  \caption{{Helices of PDB {prefix.upper()} with per-subunit total helix length, total amino acids, and \% helical content.}}",
+        rf"  \label{{tab:{prefix.lower()}_helices_v2}}",
         r"  \endlastfoot",
     ]
     for h in helices:
@@ -540,11 +531,11 @@ def build_aa_summary(chain_info):
     return rows
 
 
-def write_aa_txt(rows, path: Path):
+def write_aa_txt(rows, path: Path, prefix: str=""):
     header = (f"{'Code':<10}{'Chains':<10}{'TotalAA':>9}  "
               f"{'UniProt':<12}{'db_code':<18}Protein name")
     lines = [
-        "7C4J per-protein total amino-acid summary (unique protein codes).",
+        f"{prefix.upper()} per-protein total amino-acid summary (unique protein codes).",
         f"Unique proteins: {len(rows)}",
         "",
         "=" * len(header),
@@ -564,9 +555,9 @@ def write_aa_txt(rows, path: Path):
     path.write_text("\n".join(lines) + "\n")
 
 
-def write_aa_tex(rows, path: Path):
+def write_aa_tex(rows, path: Path, prefix: str=""):
     lines = [
-        r"% 7C4J unique protein code => total amino acids summary.",
+        rf"% {prefix.upper()} unique protein code => total amino acids summary.",
         r"% Requires: \usepackage{booktabs}",
         r"\begin{table}[htbp]",
         r"  \centering\small",
@@ -591,10 +582,10 @@ def write_aa_tex(rows, path: Path):
     )
     lines.append(r"    \bottomrule")
     lines.append(r"  \end{tabular}")
-    lines.append(r"  \caption{Unique protein chains of PDB 7C4J with short protein codes "
+    lines.append(rf"  \caption{{Unique protein chains of PDB {prefix.upper()} with short protein codes "
                  r"and total number of amino acids. Chains sharing an entity (e.g. B \& D = TYE2) "
-                 r"are collapsed into one row.}")
-    lines.append(r"  \label{tab:7c4j_protein_aa}")
+                 r"are collapsed into one row.}}")
+    lines.append(rf"  \label{{tab:{prefix.lower()}_protein_aa}}")
     lines.append(r"\end{table}")
     path.write_text("\n".join(lines) + "\n")
 
@@ -609,8 +600,52 @@ def write_aa_csv(rows, path: Path):
 
 
 # ---------------------------------------------------------------------------
+def _build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Parse helices from any mmCIF file and produce summary tables (txt/LaTeX/csv)."
+    )
+    parser.add_argument(
+        "cif",
+        type=Path,
+        help="Path to the input mmCIF file (e.g. structure.cif)",
+    )
+    parser.add_argument(
+        "--out-dir",
+        type=Path,
+        default=None,
+        help="Output directory for generated files. Defaults to current working directory.",
+    )
+    parser.add_argument(
+        "--prefix",
+        type=str,
+        default=None,
+        help="Prefix used for output filenames and headers (e.g. 7C4J). Defaults to cif file stem.",
+    )
+    return parser
+
+
 def main():
-    d = parse_mmcif(CIF_FILE)
+    parser = _build_arg_parser()
+    args = parser.parse_args()
+
+    cif_path: Path = args.cif
+    if not cif_path.exists():
+        raise SystemExit(f"Error: CIF file not found: {cif_path}")
+
+    prefix: str = args.prefix or cif_path.stem
+    out_dir: Path = args.out_dir or Path.cwd()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    OUT_V1_TXT = out_dir / f"{prefix}_helices_v1.txt"
+    OUT_V1_TEX = out_dir / f"{prefix}_helices_v1.tex"
+    OUT_V2_TXT = out_dir / f"{prefix}_helices_v2.txt"
+    OUT_V2_TEX = out_dir / f"{prefix}_helices_v2.tex"
+    OUT_CSV    = out_dir / f"{prefix}_helices.csv"
+    OUT_AA_TXT = out_dir / f"{prefix}_protein_aa_summary.txt"
+    OUT_AA_TEX = out_dir / f"{prefix}_protein_aa_summary.tex"
+    OUT_AA_CSV = out_dir / f"{prefix}_protein_aa_summary.csv"
+
+    d = parse_mmcif(str(cif_path))
     chain_info = parse_chain_proteins(d)
     helices    = annotate_helices(parse_helices(d), chain_info)
 
@@ -633,12 +668,12 @@ def main():
         grand += subunit_len[(ch, prot)]
     print(f"  {'GRAND TOTAL':<55}  {grand} aa total in helices")
 
-    write_v1_txt(helices_prot, Path(OUT_V1_TXT))
-    write_v1_tex(helices_prot, Path(OUT_V1_TEX))
+    write_v1_txt(helices_prot, Path(OUT_V1_TXT), prefix=prefix)
+    write_v1_tex(helices_prot, Path(OUT_V1_TEX), prefix=prefix)
     print(f"\nWrote v1 (name|start|end)         → {OUT_V1_TXT}  / {OUT_V1_TEX}")
 
-    write_v2_txt(helices_prot, Path(OUT_V2_TXT))
-    write_v2_tex(helices_prot, Path(OUT_V2_TEX))
+    write_v2_txt(helices_prot, Path(OUT_V2_TXT), prefix=prefix)
+    write_v2_tex(helices_prot, Path(OUT_V2_TEX), prefix=prefix)
     print(f"Wrote v2 (name|start|end|length)  → {OUT_V2_TXT}  / {OUT_V2_TEX}")
 
     write_csv(helices_prot, Path(OUT_CSV))
@@ -646,8 +681,8 @@ def main():
 
     # --- NEW: Unique protein code => total amino acids table ---
     aa_rows = build_aa_summary(chain_info)
-    write_aa_txt(aa_rows, Path(OUT_AA_TXT))
-    write_aa_tex(aa_rows, Path(OUT_AA_TEX))
+    write_aa_txt(aa_rows, Path(OUT_AA_TXT), prefix=prefix)
+    write_aa_tex(aa_rows, Path(OUT_AA_TEX), prefix=prefix)
     write_aa_csv(aa_rows, Path(OUT_AA_CSV))
     print(f"\nWrote protein code / TotalAA table:")
     print(f"  TXT  → {OUT_AA_TXT}")

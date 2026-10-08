@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Extract ALL ligands / HETATM residues from 4LXZ.cif.
+"""Extract ALL ligands / HETATM residues from an mmCIF file.
+
+Usage:
+    parse_ligands.py <cif> [--out-dir DIR] [--prefix NAME]
+                           [--keep-water-ions-in-sm | --exclude-water-ions-in-sm]
 
 Outputs 3 variants for each of the 2 ligand classes:
-  (A) Small-molecule ligands      → 4LXZ_ligands_sm.{txt,tex,csv}
+  (A) Small-molecule ligands      → <prefix>_ligands_sm.{txt,tex,csv}
         (non-polymer HETATM, excluding water/single-atom ions if requested)
-  (B) All HETATM residues         → 4LXZ_ligands_all.{txt,tex,csv}
+  (B) All HETATM residues         → <prefix>_ligands_all.{txt,tex,csv}
         (includes water HOH, monoatomic ions like CL/MG/ZN etc.)
 
 For every ligand residue the script lists:
@@ -12,21 +16,13 @@ For every ligand residue the script lists:
 """
 from __future__ import annotations
 
+import argparse
 import csv
 from collections import defaultdict, OrderedDict
 from pathlib import Path
 
 import numpy as np
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
-
-# =========================================================================
-CIF_FILE       = "/Users/becke410/Downloads/4LXZ.cif"
-OUT_SM_TXT     = "/Users/becke410/Eval_code/4LXZ_ligands_sm.txt"
-OUT_SM_TEX     = "/Users/becke410/Eval_code/4LXZ_ligands_sm.tex"
-OUT_SM_CSV     = "/Users/becke410/Eval_code/4LXZ_ligands_sm.csv"
-OUT_ALL_TXT    = "/Users/becke410/Eval_code/4LXZ_ligands_all.txt"
-OUT_ALL_TEX    = "/Users/becke410/Eval_code/4LXZ_ligands_all.tex"
-OUT_ALL_CSV    = "/Users/becke410/Eval_code/4LXZ_ligands_all.csv"
 
 # ---- classification rule -------------------------------------------------
 # Default "small-molecule / true ligand" list excludes:
@@ -225,17 +221,17 @@ def classify_ligand_residues(atoms):
 # =========================================================================
 # Writers
 # =========================================================================
-def _ligand_header_for_TXT(residues_list, subset_name: str) -> str:
+def _ligand_header_for_TXT(prefix: str, residues_list, subset_name: str) -> str:
     n_res  = len(residues_list)
     n_atom = sum(r["num_atoms"] for r in residues_list)
     uniq = sorted({r["resname"] for r in residues_list})
-    return (f"4LXZ ligands — {subset_name}.   "
+    return (f"{prefix.upper()} ligands — {subset_name}.   "
             f"Residues: {n_res}, Atoms: {n_atom}, "
             f"unique resnames: {len(uniq)} ({', '.join(uniq)})")
 
 
-def write_txt(residues, path: Path, subset_name: str):
-    intro = _ligand_header_for_TXT(residues, subset_name)
+def write_txt(prefix: str, residues, path: Path, subset_name: str):
+    intro = _ligand_header_for_TXT(prefix, residues, subset_name)
     hdr = (f"{'ResName':<10}{'Chain':>6}{'ResID':>8}  "
            f"{'Atom':<8}{'X':>10}{'Y':>10}{'Z':>10}")
     lines = [intro, "", "=" * len(hdr), hdr, "-" * len(hdr)]
@@ -258,11 +254,11 @@ def write_txt(residues, path: Path, subset_name: str):
     path.write_text("\n".join(lines) + "\n")
 
 
-def write_tex(residues, path: Path, subset_name: str):
+def write_tex(prefix: str, residues, path: Path, subset_name: str):
     caption_suffix = subset_name.replace("_", r"\_")
     label = subset_name.lower().replace(" ", "_")
     lines = [
-        f"% 4LXZ ligand extraction — {subset_name}",
+        f"% {prefix.upper()} ligand extraction — {subset_name}",
         r"% Requires: \usepackage{booktabs,longtable}",
         r"\begin{longtable}{@{}lcrr@{}}",
         r"  \toprule",
@@ -278,9 +274,9 @@ def write_tex(residues, path: Path, subset_name: str):
     ]
     cap = (r"  \caption{All "
            + caption_suffix
-           + r" residues of PDB 4LXZ with atom names and Cartesian coordinates.}")
+           + fr" residues of PDB {prefix.upper()} with atom names and Cartesian coordinates.}}")
     lines.append(cap)
-    lines.append(f"  \\label{{tab:4lxz_lig_{label}}}")
+    lines.append(f"  \\label{{tab:{prefix.lower()}_lig_{label}}}")
     lines.append(r"  \endlastfoot")
 
     for i, r in enumerate(residues):
@@ -324,11 +320,73 @@ def write_csv(residues, path: Path):
 
 
 # =========================================================================
+# CLI
+# =========================================================================
+def _build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Extract ALL ligands / HETATM residues from an mmCIF file.",
+    )
+    parser.add_argument(
+        "cif",
+        type=Path,
+        help="Path to the input mmCIF file.",
+    )
+    parser.add_argument(
+        "--out-dir",
+        type=Path,
+        default=None,
+        help="Output directory for generated files (default: current working directory).",
+    )
+    parser.add_argument(
+        "--prefix",
+        type=str,
+        default=None,
+        help="Prefix for output filenames (default: stem of the CIF filename).",
+    )
+    water_group = parser.add_mutually_exclusive_group()
+    water_group.add_argument(
+        "--keep-water-ions-in-sm",
+        dest="keep_water_ions",
+        action="store_true",
+        help="Keep water and monoatomic ions in the 'small molecule' output set.",
+    )
+    water_group.add_argument(
+        "--exclude-water-ions-in-sm",
+        dest="keep_water_ions",
+        action="store_false",
+        help="Exclude water and monoatomic ions from the 'small molecule' output set.",
+    )
+    parser.set_defaults(keep_water_ions=not EXCLUDE_WATER_IONS_IN_SM)
+    return parser
+
+
+# =========================================================================
 # Main
 # =========================================================================
 def main():
-    print(f"Parsing {CIF_FILE} ...")
-    d = MMCIF2Dict(CIF_FILE)
+    parser = _build_arg_parser()
+    args = parser.parse_args()
+
+    cif_path: Path = args.cif
+    if not cif_path.exists():
+        parser.error(f"CIF file not found: {cif_path}")
+
+    prefix = args.prefix or cif_path.stem
+
+    out_dir = args.out_dir or Path.cwd()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    OUT_SM_TXT  = out_dir / f"{prefix}_ligands_sm.txt"
+    OUT_SM_TEX  = out_dir / f"{prefix}_ligands_sm.tex"
+    OUT_SM_CSV  = out_dir / f"{prefix}_ligands_sm.csv"
+    OUT_ALL_TXT = out_dir / f"{prefix}_ligands_all.txt"
+    OUT_ALL_TEX = out_dir / f"{prefix}_ligands_all.tex"
+    OUT_ALL_CSV = out_dir / f"{prefix}_ligands_all.csv"
+
+    keep_water_ions_in_sm: bool = args.keep_water_ions
+
+    print(f"Parsing {cif_path} ...")
+    d = MMCIF2Dict(str(cif_path))
     atoms = parse_ligand_atoms(d)
     residues = classify_ligand_residues(atoms)
 
@@ -342,22 +400,25 @@ def main():
     print(f"  water residues:         {n_water}")
     print(f"  monoatomic ions:        {n_ion}  (unique names: {uniq_ion})")
 
-    res_sm  = [r for r in residues if r["is_small_mol"]]
+    if keep_water_ions_in_sm:
+        res_sm = residues
+    else:
+        res_sm = [r for r in residues if r["is_small_mol"]]
     res_all = residues
 
     # ---- write small-molecules ----
-    write_txt(res_sm,  Path(OUT_SM_TXT),  "small_molecule_ligands (no water/ions)")
-    write_tex(res_sm,  Path(OUT_SM_TEX),  "small_molecule_ligands")
-    write_csv(res_sm,  Path(OUT_SM_CSV))
+    write_txt(prefix, res_sm,  OUT_SM_TXT,  "small_molecule_ligands (no water/ions)")
+    write_tex(prefix, res_sm,  OUT_SM_TEX,  "small_molecule_ligands")
+    write_csv(res_sm,  OUT_SM_CSV)
     print(f"\nSmall-molecule ligands only → wrote:")
     print(f"  TXT : {OUT_SM_TXT}")
     print(f"  TEX : {OUT_SM_TEX}")
     print(f"  CSV : {OUT_SM_CSV}")
 
     # ---- write ALL HETATM (incl water/ions) ----
-    write_txt(res_all, Path(OUT_ALL_TXT), "all_HETATM (ligands + ions + water)")
-    write_tex(res_all, Path(OUT_ALL_TEX), "all_HETATM")
-    write_csv(res_all, Path(OUT_ALL_CSV))
+    write_txt(prefix, res_all, OUT_ALL_TXT, "all_HETATM (ligands + ions + water)")
+    write_tex(prefix, res_all, OUT_ALL_TEX, "all_HETATM")
+    write_csv(res_all, OUT_ALL_CSV)
     print(f"\nAll HETATM residues → wrote:")
     print(f"  TXT : {OUT_ALL_TXT}")
     print(f"  TEX : {OUT_ALL_TEX}")
